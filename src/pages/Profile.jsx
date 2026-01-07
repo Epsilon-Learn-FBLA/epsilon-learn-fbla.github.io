@@ -196,6 +196,8 @@ export default function Profile() {
     setTheme(newTheme);
     try {
       await base44.auth.updateMe({ theme: newTheme });
+      // Reload page to apply theme
+      window.location.reload();
     } catch (e) {
       console.error('Failed to update theme');
     }
