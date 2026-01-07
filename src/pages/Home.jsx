@@ -152,17 +152,11 @@ export default function Home() {
               <p className="text-xl text-slate-600 mb-10 max-w-2xl mx-auto">
                 Epsilon is your gateway to business excellence. Interactive lessons, engaging quizzes, and real-world knowledge—all designed to help students succeed.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <div className="flex justify-center">
                 <Link to={createPageUrl('Resources')}>
                   <Button size="lg" className="bg-[#7c6aef] hover:bg-[#5b4acf] text-white px-8 py-6 text-lg rounded-xl shadow-lg shadow-purple-300/50">
-                    Start Learning Free
+                    Start Learning
                     <ArrowRight className="ml-2 w-5 h-5" />
-                  </Button>
-                </Link>
-                <Link to={createPageUrl('Resources?type=video')}>
-                  <Button size="lg" variant="outline" className="px-8 py-6 text-lg rounded-xl border-2">
-                    <Play className="mr-2 w-5 h-5" />
-                    Watch Demo
                   </Button>
                 </Link>
               </div>
