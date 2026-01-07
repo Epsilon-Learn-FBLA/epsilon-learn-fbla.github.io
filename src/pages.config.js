@@ -1,22 +1,22 @@
-import Home from './pages/Home';
-import Resources from './pages/Resources';
-import Dashboard from './pages/Dashboard';
-import Profile from './pages/Profile';
 import Calendar from './pages/Calendar';
+import Dashboard from './pages/Dashboard';
+import Home from './pages/Home';
 import LessonView from './pages/LessonView';
+import Profile from './pages/Profile';
 import QuizView from './pages/QuizView';
+import Resources from './pages/Resources';
 import VideoView from './pages/VideoView';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
-    "Home": Home,
-    "Resources": Resources,
-    "Dashboard": Dashboard,
-    "Profile": Profile,
     "Calendar": Calendar,
+    "Dashboard": Dashboard,
+    "Home": Home,
     "LessonView": LessonView,
+    "Profile": Profile,
     "QuizView": QuizView,
+    "Resources": Resources,
     "VideoView": VideoView,
 }
 

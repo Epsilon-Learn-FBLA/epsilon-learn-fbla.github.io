@@ -4,16 +4,26 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { 
   ChevronLeft, ChevronRight, Calendar as CalendarIcon, 
-  Video, Clock, User, CheckCircle, ExternalLink
+  Video, Clock, User, CheckCircle, ExternalLink, Filter
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import CreateMeetingDialog from '../components/CreateMeetingDialog';
 
 export default function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [user, setUser] = useState(null);
+  const [filterCategory, setFilterCategory] = useState('all');
+  const [filterType, setFilterType] = useState('all');
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -66,6 +76,13 @@ export default function Calendar() {
 
   const registeredMeetingIds = registrations.map(r => r.meeting_id);
 
+  // Filter meetings
+  const filteredMeetings = meetings.filter(m => {
+    const categoryMatch = filterCategory === 'all' || m.category === filterCategory;
+    const typeMatch = filterType === 'all' || m.meeting_type === filterType;
+    return categoryMatch && typeMatch;
+  });
+
   // Get current month data
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -85,7 +102,7 @@ export default function Calendar() {
 
   const getMeetingsForDate = (day) => {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return meetings.filter(m => m.date === dateStr);
+    return filteredMeetings.filter(m => m.date === dateStr);
   };
 
   const categoryColors = {
@@ -115,24 +132,64 @@ export default function Calendar() {
   const selectedDateMeetings = selectedDate ? getMeetingsForDate(selectedDate) : [];
 
   // Get upcoming meetings (sorted by date)
-  const upcomingMeetings = meetings
+  const upcomingMeetings = filteredMeetings
     .filter(m => new Date(m.date) >= new Date(today.toDateString()))
     .sort((a, b) => new Date(a.date) - new Date(b.date))
     .slice(0, 5);
+
+  const meetingTypeLabels = {
+    live_tutoring: 'Live Tutoring',
+    group_study: 'Group Study'
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 py-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-12 h-12 rounded-xl bg-[#7c6aef] flex items-center justify-center">
-            <CalendarIcon className="w-6 h-6 text-white" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-[#7c6aef] flex items-center justify-center">
+              <CalendarIcon className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900">Meeting Calendar</h1>
+              <p className="text-slate-600">Join live sessions with expert instructors</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">Meeting Calendar</h1>
-            <p className="text-slate-600">Join live sessions with expert instructors</p>
-          </div>
+          <CreateMeetingDialog />
         </div>
+
+        {/* Filters */}
+        <Card className="border-0 shadow-sm mb-6">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4">
+              <Filter className="w-5 h-5 text-slate-400" />
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Meeting Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="live_tutoring">Live Tutoring</SelectItem>
+                  <SelectItem value="group_study">Group Study</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={filterCategory} onValueChange={setFilterCategory}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="fundamentals">Fundamentals</SelectItem>
+                  <SelectItem value="marketing">Marketing</SelectItem>
+                  <SelectItem value="finance">Finance</SelectItem>
+                  <SelectItem value="entrepreneurship">Entrepreneurship</SelectItem>
+                  <SelectItem value="leadership">Leadership</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Calendar */}
@@ -248,6 +305,14 @@ export default function Calendar() {
                                   <Clock className="w-3 h-3" />
                                   {meeting.time} ({meeting.duration_minutes} min)
                                 </div>
+                                <Badge variant="outline" className="mt-2 text-xs">
+                                  {meetingTypeLabels[meeting.meeting_type]}
+                                </Badge>
+                                {meeting.recurring !== 'none' && (
+                                  <Badge variant="outline" className="mt-2 ml-2 text-xs">
+                                    {meeting.recurring}
+                                  </Badge>
+                                )}
                               </div>
                             </div>
                             

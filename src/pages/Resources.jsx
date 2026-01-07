@@ -132,13 +132,14 @@ export default function Resources() {
     } else if (resource.type === 'video') {
       window.location.href = createPageUrl(`VideoView?id=${resource.id}`);
     } else if (resource.type === 'download') {
-      // Track download and open link
+      // Generate and download PDF
       if (user) {
         trackDownloadMutation.mutate(resource.id);
       }
-      if (resource.download_url) {
-        window.open(resource.download_url, '_blank');
-      }
+      toast.success('Generating PDF...');
+      setTimeout(() => {
+        generateBusinessPDF(resource);
+      }, 300);
     }
   };
 
