@@ -485,16 +485,6 @@ export default function Profile() {
                 </button>
 
                 <button
-                  onClick={() => handleThemeChange('dark')}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                    theme === 'dark' ? 'border-[#7c6aef] bg-purple-50' : 'border-slate-200 hover:border-slate-300'
-                  }`}
-                >
-                  <div className="w-12 h-12 rounded-full bg-slate-700 border-2 border-slate-600" />
-                  <span className="text-sm font-medium text-slate-700">Dark Mode</span>
-                </button>
-
-                <button
                   onClick={() => handleThemeChange('high-contrast')}
                   className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
                     theme === 'high-contrast' ? 'border-[#7c6aef] bg-purple-50' : 'border-slate-200 hover:border-slate-300'
