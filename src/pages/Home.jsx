@@ -1,17 +1,59 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { motion } from 'framer-motion';
-import { Star, Users, BookOpen, Award, ArrowRight, Play, CheckCircle, TrendingUp, Quote } from 'lucide-react';
+import { Star, Users, BookOpen, Award, ArrowRight, Play, CheckCircle, TrendingUp, Quote, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { base44 } from '@/api/base44Client';
+import { useQuery } from '@tanstack/react-query';
+import CountingNumber from '../components/CountingNumber';
 
 export default function Home() {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    loadUser();
+  }, []);
+
+  const loadUser = async () => {
+    try {
+      const currentUser = await base44.auth.me();
+      setUser(currentUser);
+    } catch (e) {
+      // Not logged in
+    }
+  };
+
+  const { data: allProgress = [] } = useQuery({
+    queryKey: ['allUserProgress'],
+    queryFn: async () => {
+      return await base44.entities.UserProgress.list();
+    },
+  });
+
+  const { data: userProgress } = useQuery({
+    queryKey: ['userProgress', user?.email],
+    queryFn: async () => {
+      const progress = await base44.entities.UserProgress.filter({ user_email: user.email });
+      return progress[0];
+    },
+    enabled: !!user,
+  });
+
+  // Calculate total XP from all users
+  const totalXP = allProgress.reduce((sum, p) => sum + (p.xp || 0), 0);
+  const displayXP = 21000 + totalXP;
+
+  // Calculate total users who completed at least 1 lesson
+  const usersWithLessons = allProgress.filter(p => (p.completed_lessons?.length || 0) >= 1).length;
+
+  // Calculate number of users who completed 2+ lessons
+  const totalUsers = allProgress.filter(p => (p.completed_lessons?.length || 0) >= 2).length;
+
   const stats = [
-    { value: '10,000+', label: 'Students Learning', icon: Users },
-    { value: '50+', label: 'Business Lessons', icon: BookOpen },
-    { value: '95%', label: 'Success Rate', icon: TrendingUp },
-    { value: '500+', label: 'Badges Earned', icon: Award },
+    { value: displayXP, label: 'Total XP Earned', icon: Zap, isNumber: true },
+    { value: totalUsers, label: 'Total Users', icon: Users, isNumber: true, subtitle: `${usersWithLessons} completed 1+ lesson` },
   ];
 
   const features = [
@@ -40,11 +82,11 @@ export default function Home() {
   const reviews = [
     {
       name: 'Sarah Chen',
-      role: 'FBLA State Champion',
+      role: 'Business Student',
       school: 'Lincoln High School',
       avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
       rating: 5,
-      text: 'Epsilon helped me prepare for FBLA competitions like nothing else. The interactive lessons and quizzes made complex business concepts easy to understand. I went from struggling with marketing basics to winning at State!',
+      text: 'Epsilon helped me understand business concepts like nothing else. The interactive lessons and quizzes made complex topics easy to understand. I went from struggling with marketing basics to acing my exams!',
     },
     {
       name: 'Marcus Johnson',
@@ -64,7 +106,7 @@ export default function Home() {
     },
     {
       name: 'David Park',
-      role: 'FBLA Member',
+      role: 'Finance Enthusiast',
       school: 'Sunrise High School',
       avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop',
       rating: 5,
@@ -103,15 +145,12 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <span className="inline-block px-4 py-1.5 bg-purple-100 text-purple-700 rounded-full text-sm font-medium mb-6">
-                🎓 FBLA Competition Ready
-              </span>
               <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-slate-900 mb-6 leading-tight">
                 Master <span className="text-gradient">Business</span><br />
                 Build Your Future
               </h1>
               <p className="text-xl text-slate-600 mb-10 max-w-2xl mx-auto">
-                Epsilon is your gateway to business excellence. Interactive lessons, engaging quizzes, and real-world knowledge—all designed to help students succeed in FBLA and beyond.
+                Epsilon is your gateway to business excellence. Interactive lessons, engaging quizzes, and real-world knowledge—all designed to help students succeed.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link to={createPageUrl('Resources')}>
@@ -135,7 +174,7 @@ export default function Home() {
       {/* Stats Bar */}
       <section className="bg-white py-8 border-y border-slate-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 gap-8 max-w-2xl mx-auto">
             {stats.map((stat, index) => (
               <motion.div
                 key={stat.label}
@@ -146,9 +185,12 @@ export default function Home() {
               >
                 <div className="flex items-center justify-center gap-2 mb-1">
                   <stat.icon className="w-5 h-5 text-[#7c6aef]" />
-                  <span className="text-3xl font-bold text-slate-900">{stat.value}</span>
+                  <span className="text-3xl font-bold text-slate-900">
+                    {stat.isNumber ? <CountingNumber end={stat.value} /> : stat.value}
+                  </span>
                 </div>
                 <span className="text-slate-500 text-sm">{stat.label}</span>
+                {stat.subtitle && <p className="text-xs text-slate-400 mt-1">{stat.subtitle}</p>}
               </motion.div>
             ))}
           </div>
@@ -206,10 +248,10 @@ export default function Home() {
               </p>
               <ul className="space-y-4">
                 {[
-                  'Aligned with FBLA competition standards',
                   'Created by experienced business educators',
                   'Constantly updated with new content',
                   'Accessible on any device, anytime',
+                  'Track your progress and earn rewards',
                 ].map((item, index) => (
                   <li key={index} className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />

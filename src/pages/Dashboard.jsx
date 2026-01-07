@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useProgressNotifications } from '../components/ProgressNotification';
 import { Toaster } from 'sonner';
+import CountingNumber from '../components/CountingNumber';
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -140,7 +141,9 @@ export default function Dashboard() {
           <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-xl shadow-sm border border-slate-100">
             <Zap className="w-6 h-6 text-amber-500" />
             <div>
-              <p className="text-2xl font-bold text-slate-900">{userProgress?.xp || 0}</p>
+              <p className="text-2xl font-bold text-slate-900">
+                <CountingNumber end={userProgress?.xp || 0} />
+              </p>
               <p className="text-sm text-slate-500">Total XP</p>
             </div>
           </div>
@@ -187,15 +190,21 @@ export default function Dashboard() {
                 <div className="flex-1 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-slate-600">Lessons Completed</span>
-                    <span className="font-semibold">{userProgress?.completed_lessons?.length || 0}</span>
+                    <span className="font-semibold">
+                      <CountingNumber end={userProgress?.completed_lessons?.length || 0} />
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-slate-600">Quizzes Passed</span>
-                    <span className="font-semibold">{userProgress?.completed_quizzes?.length || 0}</span>
+                    <span className="font-semibold">
+                      <CountingNumber end={userProgress?.completed_quizzes?.length || 0} />
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-slate-600">Videos Watched</span>
-                    <span className="font-semibold">{userProgress?.completed_videos?.length || 0}</span>
+                    <span className="font-semibold">
+                      <CountingNumber end={userProgress?.completed_videos?.length || 0} />
+                    </span>
                   </div>
                 </div>
               </div>
@@ -327,7 +336,9 @@ export default function Dashboard() {
                   <stat.icon className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
+                  <p className="text-2xl font-bold text-slate-900">
+                    <CountingNumber end={stat.value} />
+                  </p>
                   <p className="text-sm text-slate-500">{stat.label}</p>
                 </div>
               </CardContent>
@@ -358,6 +369,18 @@ export default function Dashboard() {
                   download: 'bg-purple-100 text-purple-600',
                 };
 
+                // Check if resource is completed
+                let isCompleted = false;
+                if (resource.type === 'lesson') {
+                  isCompleted = userProgress?.completed_lessons?.includes(resource.id);
+                } else if (resource.type === 'quiz') {
+                  isCompleted = userProgress?.completed_quizzes?.includes(resource.id);
+                } else if (resource.type === 'video') {
+                  isCompleted = userProgress?.completed_videos?.includes(resource.id);
+                } else if (resource.type === 'download') {
+                  isCompleted = userProgress?.downloaded_resources?.includes(resource.id);
+                }
+
                 const handleClick = () => {
                   if (resource.type === 'lesson') {
                     window.location.href = createPageUrl(`LessonView?id=${resource.id}`);
@@ -383,7 +406,12 @@ export default function Dashboard() {
                       <Icon className="w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-slate-900 truncate">{resource.title}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-slate-900 truncate">{resource.title}</p>
+                        {isCompleted && (
+                          <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        )}
+                      </div>
                       <p className="text-sm text-slate-500 capitalize">{resource.type}</p>
                     </div>
                     <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-[#7c6aef] group-hover:translate-x-1 transition-all" />
