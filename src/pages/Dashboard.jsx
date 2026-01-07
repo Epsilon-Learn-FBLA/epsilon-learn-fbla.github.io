@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -11,9 +11,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useProgressNotifications } from '../components/ProgressNotification';
+import { Toaster } from 'sonner';
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
+  const previousProgress = useRef(null);
 
   useEffect(() => {
     loadUser();
@@ -48,7 +51,16 @@ export default function Dashboard() {
       return progress[0];
     },
     enabled: !!user,
+    onSuccess: (newProgress) => {
+      if (previousProgress.current) {
+        // This will trigger notifications if there's a change
+      }
+      previousProgress.current = newProgress;
+    },
   });
+
+  // Use progress notifications hook
+  useProgressNotifications(userProgress, previousProgress.current);
 
   const { data: resources = [] } = useQuery({
     queryKey: ['resources'],
@@ -111,6 +123,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50 py-8">
+      <Toaster />
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">

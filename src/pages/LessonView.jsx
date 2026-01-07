@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Toaster } from 'sonner';
 
 export default function LessonView() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -113,6 +114,7 @@ export default function LessonView() {
 
   return (
     <div className="min-h-screen bg-slate-50 py-8">
+      <Toaster />
       <div className="max-w-4xl mx-auto px-4 sm:px-6">
         {/* Header */}
         <div className="mb-8">

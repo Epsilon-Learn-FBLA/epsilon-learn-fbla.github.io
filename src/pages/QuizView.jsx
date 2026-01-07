@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Toaster } from 'sonner';
 
 export default function QuizView() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -157,6 +158,7 @@ export default function QuizView() {
 
     return (
       <div className="min-h-screen bg-slate-50 py-8">
+        <Toaster />
         <div className="max-w-2xl mx-auto px-4 sm:px-6">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
