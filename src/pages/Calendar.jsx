@@ -1,6 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { base44 } from '@/api/base44Client';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, BookOpen, CheckCircle, Play, Zap } from 'lucide-react';
+import { 
+  ChevronLeft, ChevronRight, Calendar as CalendarIcon, 
+  Video, Clock, User, CheckCircle, ExternalLink
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,16 +13,58 @@ import { Badge } from '@/components/ui/badge';
 export default function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
+  const [user, setUser] = useState(null);
+  const queryClient = useQueryClient();
 
-  // Sample events/deadlines
-  const events = [
-    { date: '2024-01-15', type: 'lesson', title: 'Marketing Fundamentals Due', xp: 150 },
-    { date: '2024-01-18', type: 'quiz', title: 'Finance Quiz Deadline', xp: 200 },
-    { date: '2024-01-20', type: 'video', title: 'Leadership Webinar', xp: 100 },
-    { date: '2024-01-22', type: 'lesson', title: 'Business Ethics Module', xp: 150 },
-    { date: '2024-01-25', type: 'quiz', title: 'Entrepreneurship Assessment', xp: 250 },
-    { date: '2024-01-28', type: 'video', title: 'Guest Speaker: Startup Success', xp: 100 },
-  ];
+  useEffect(() => {
+    loadUser();
+  }, []);
+
+  const loadUser = async () => {
+    try {
+      const currentUser = await base44.auth.me();
+      setUser(currentUser);
+    } catch (e) {
+      // Not logged in
+    }
+  };
+
+  const { data: meetings = [], isLoading } = useQuery({
+    queryKey: ['meetings'],
+    queryFn: () => base44.entities.Meeting.list(),
+  });
+
+  const { data: registrations = [] } = useQuery({
+    queryKey: ['registrations', user?.email],
+    queryFn: () => base44.entities.MeetingRegistration.filter({ user_email: user.email }),
+    enabled: !!user,
+  });
+
+  const registerMutation = useMutation({
+    mutationFn: async (meetingId) => {
+      await base44.entities.MeetingRegistration.create({
+        user_email: user.email,
+        meeting_id: meetingId,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['registrations']);
+    },
+  });
+
+  const unregisterMutation = useMutation({
+    mutationFn: async (meetingId) => {
+      const reg = registrations.find(r => r.meeting_id === meetingId);
+      if (reg) {
+        await base44.entities.MeetingRegistration.delete(reg.id);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['registrations']);
+    },
+  });
+
+  const registeredMeetingIds = registrations.map(r => r.meeting_id);
 
   // Get current month data
   const year = currentDate.getFullYear();
@@ -36,21 +83,17 @@ export default function Calendar() {
     setCurrentDate(new Date(year, month + direction, 1));
   };
 
-  const getEventsForDate = (day) => {
+  const getMeetingsForDate = (day) => {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return events.filter(e => e.date === dateStr);
+    return meetings.filter(m => m.date === dateStr);
   };
 
-  const eventTypeColors = {
-    lesson: 'bg-blue-500',
-    quiz: 'bg-green-500',
-    video: 'bg-red-500',
-  };
-
-  const eventTypeIcons = {
-    lesson: BookOpen,
-    quiz: CheckCircle,
-    video: Play,
+  const categoryColors = {
+    fundamentals: 'bg-blue-500',
+    marketing: 'bg-pink-500',
+    finance: 'bg-green-500',
+    entrepreneurship: 'bg-purple-500',
+    leadership: 'bg-amber-500',
   };
 
   // Generate calendar days
@@ -69,7 +112,13 @@ export default function Calendar() {
            year === today.getFullYear();
   };
 
-  const selectedDateEvents = selectedDate ? getEventsForDate(selectedDate) : [];
+  const selectedDateMeetings = selectedDate ? getMeetingsForDate(selectedDate) : [];
+
+  // Get upcoming meetings (sorted by date)
+  const upcomingMeetings = meetings
+    .filter(m => new Date(m.date) >= new Date(today.toDateString()))
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+    .slice(0, 5);
 
   return (
     <div className="min-h-screen bg-slate-50 py-8">
@@ -80,8 +129,8 @@ export default function Calendar() {
             <CalendarIcon className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Learning Calendar</h1>
-            <p className="text-slate-600">Track your learning schedule and deadlines</p>
+            <h1 className="text-3xl font-bold text-slate-900">Meeting Calendar</h1>
+            <p className="text-slate-600">Join live sessions with expert instructors</p>
           </div>
         </div>
 
@@ -114,7 +163,7 @@ export default function Calendar() {
               {/* Calendar Grid */}
               <div className="grid grid-cols-7 gap-1">
                 {calendarDays.map((day, index) => {
-                  const dayEvents = day ? getEventsForDate(day) : [];
+                  const dayMeetings = day ? getMeetingsForDate(day) : [];
                   const isSelected = selectedDate === day;
                   
                   return (
@@ -134,12 +183,12 @@ export default function Calendar() {
                           <span className={`text-sm font-medium ${isSelected ? 'text-white' : isToday(day) ? 'text-[#7c6aef]' : ''}`}>
                             {day}
                           </span>
-                          {dayEvents.length > 0 && (
+                          {dayMeetings.length > 0 && (
                             <div className="flex gap-0.5 mt-1 flex-wrap">
-                              {dayEvents.slice(0, 3).map((event, i) => (
+                              {dayMeetings.slice(0, 3).map((meeting, i) => (
                                 <div
                                   key={i}
-                                  className={`w-2 h-2 rounded-full ${isSelected ? 'bg-white' : eventTypeColors[event.type]}`}
+                                  className={`w-2 h-2 rounded-full ${isSelected ? 'bg-white' : categoryColors[meeting.category] || 'bg-slate-400'}`}
                                 />
                               ))}
                             </div>
@@ -152,11 +201,11 @@ export default function Calendar() {
               </div>
 
               {/* Legend */}
-              <div className="flex gap-4 mt-6 pt-4 border-t justify-center">
-                {Object.entries(eventTypeColors).map(([type, color]) => (
-                  <div key={type} className="flex items-center gap-2">
+              <div className="flex gap-4 mt-6 pt-4 border-t justify-center flex-wrap">
+                {Object.entries(categoryColors).map(([cat, color]) => (
+                  <div key={cat} className="flex items-center gap-2">
                     <div className={`w-3 h-3 rounded-full ${color}`} />
-                    <span className="text-sm text-slate-600 capitalize">{type}</span>
+                    <span className="text-sm text-slate-600 capitalize">{cat}</span>
                   </div>
                 ))}
               </div>
@@ -165,7 +214,7 @@ export default function Calendar() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Selected Date Events */}
+            {/* Selected Date Meetings */}
             <Card className="border-0 shadow-md">
               <CardHeader>
                 <CardTitle className="text-lg">
@@ -177,67 +226,105 @@ export default function Calendar() {
               </CardHeader>
               <CardContent>
                 {selectedDate ? (
-                  selectedDateEvents.length > 0 ? (
-                    <div className="space-y-3">
-                      {selectedDateEvents.map((event, index) => {
-                        const Icon = eventTypeIcons[event.type];
+                  selectedDateMeetings.length > 0 ? (
+                    <div className="space-y-4">
+                      {selectedDateMeetings.map((meeting, index) => {
+                        const isRegistered = registeredMeetingIds.includes(meeting.id);
                         return (
                           <motion.div
-                            key={index}
+                            key={meeting.id}
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: index * 0.1 }}
-                            className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl"
+                            className="p-4 bg-slate-50 rounded-xl"
                           >
-                            <div className={`w-10 h-10 rounded-lg ${eventTypeColors[event.type]} flex items-center justify-center`}>
-                              <Icon className="w-5 h-5 text-white" />
-                            </div>
-                            <div className="flex-1">
-                              <p className="font-medium text-slate-900">{event.title}</p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Badge variant="outline" className="text-xs capitalize">
-                                  {event.type}
-                                </Badge>
-                                <span className="flex items-center gap-1 text-xs text-amber-600">
-                                  <Zap className="w-3 h-3" />
-                                  +{event.xp} XP
-                                </span>
+                            <div className="flex items-start gap-3 mb-3">
+                              <div className={`w-10 h-10 rounded-lg ${categoryColors[meeting.category]} flex items-center justify-center`}>
+                                <Video className="w-5 h-5 text-white" />
                               </div>
+                              <div className="flex-1">
+                                <p className="font-semibold text-slate-900">{meeting.title}</p>
+                                <div className="flex items-center gap-2 mt-1 text-sm text-slate-500">
+                                  <Clock className="w-3 h-3" />
+                                  {meeting.time} ({meeting.duration_minutes} min)
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-2 mb-3 text-sm">
+                              <User className="w-4 h-4 text-slate-400" />
+                              <span className="text-slate-700">{meeting.teacher_name}</span>
+                              <span className="text-slate-400">•</span>
+                              <span className="text-slate-500">{meeting.teacher_title}</span>
+                            </div>
+
+                            <p className="text-sm text-slate-600 mb-4">{meeting.description}</p>
+
+                            <div className="flex gap-2">
+                              {isRegistered ? (
+                                <>
+                                  <a href={meeting.meeting_link} target="_blank" rel="noopener noreferrer" className="flex-1">
+                                    <Button className="w-full bg-green-600 hover:bg-green-700" size="sm">
+                                      <ExternalLink className="w-4 h-4 mr-2" />
+                                      Join Meeting
+                                    </Button>
+                                  </a>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => unregisterMutation.mutate(meeting.id)}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </>
+                              ) : (
+                                <Button 
+                                  className="w-full bg-[#7c6aef] hover:bg-[#5b4acf]" 
+                                  size="sm"
+                                  onClick={() => user ? registerMutation.mutate(meeting.id) : base44.auth.redirectToLogin()}
+                                >
+                                  <CheckCircle className="w-4 h-4 mr-2" />
+                                  Register
+                                </Button>
+                              )}
                             </div>
                           </motion.div>
                         );
                       })}
                     </div>
                   ) : (
-                    <p className="text-slate-500 text-center py-4">No events on this date</p>
+                    <p className="text-slate-500 text-center py-4">No meetings on this date</p>
                   )
                 ) : (
-                  <p className="text-slate-500 text-center py-4">Click on a date to view events</p>
+                  <p className="text-slate-500 text-center py-4">Click on a date to view meetings</p>
                 )}
               </CardContent>
             </Card>
 
-            {/* Upcoming Events */}
+            {/* Upcoming Meetings */}
             <Card className="border-0 shadow-md">
               <CardHeader>
-                <CardTitle className="text-lg">Upcoming Deadlines</CardTitle>
+                <CardTitle className="text-lg">Upcoming Meetings</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {events.slice(0, 4).map((event, index) => {
-                    const Icon = eventTypeIcons[event.type];
-                    const eventDate = new Date(event.date);
+                  {upcomingMeetings.map((meeting, index) => {
+                    const meetingDate = new Date(meeting.date);
+                    const isRegistered = registeredMeetingIds.includes(meeting.id);
                     return (
-                      <div key={index} className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg ${eventTypeColors[event.type]} flex items-center justify-center`}>
-                          <Icon className="w-4 h-4 text-white" />
+                      <div key={meeting.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50">
+                        <div className={`w-10 h-10 rounded-lg ${categoryColors[meeting.category]} flex items-center justify-center`}>
+                          <Video className="w-5 h-5 text-white" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-slate-900 truncate">{event.title}</p>
+                          <p className="text-sm font-medium text-slate-900 truncate">{meeting.title}</p>
                           <p className="text-xs text-slate-500">
-                            {eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            {meetingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} • {meeting.time}
                           </p>
                         </div>
+                        {isRegistered && (
+                          <Badge className="bg-green-100 text-green-700 text-xs">Registered</Badge>
+                        )}
                       </div>
                     );
                   })}
