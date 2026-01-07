@@ -6,11 +6,11 @@ import { createPageUrl } from '../utils';
 import { motion } from 'framer-motion';
 import { 
   Home, BookOpen, CheckCircle, Play, Download, Award, 
-  TrendingUp, Target, Calendar, Flame, ChevronRight, Zap
+  Calendar, Flame, ChevronRight, Zap, Video, Clock, User, ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -55,6 +55,25 @@ export default function Dashboard() {
     queryFn: () => base44.entities.Resource.list(),
   });
 
+  const { data: meetings = [] } = useQuery({
+    queryKey: ['meetings'],
+    queryFn: () => base44.entities.Meeting.list(),
+  });
+
+  const { data: registrations = [] } = useQuery({
+    queryKey: ['registrations', user?.email],
+    queryFn: () => base44.entities.MeetingRegistration.filter({ user_email: user.email }),
+    enabled: !!user,
+  });
+
+  const registeredMeetingIds = registrations.map(r => r.meeting_id);
+  
+  // Get registered upcoming meetings
+  const today = new Date();
+  const upcomingRegisteredMeetings = meetings
+    .filter(m => registeredMeetingIds.includes(m.id) && new Date(m.date) >= new Date(today.toDateString()))
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+
   const recentResources = resources.slice(0, 6);
   
   const completedCount = (userProgress?.completed_lessons?.length || 0) + 
@@ -73,6 +92,14 @@ export default function Dashboard() {
     { day: 'Sat', completed: 1 },
     { day: 'Sun', completed: 6 },
   ];
+
+  const categoryColors = {
+    fundamentals: 'bg-blue-500',
+    marketing: 'bg-pink-500',
+    finance: 'bg-green-500',
+    entrepreneurship: 'bg-purple-500',
+    leadership: 'bg-amber-500',
+  };
 
   if (!user) {
     return (
@@ -112,7 +139,7 @@ export default function Dashboard() {
           <Card className="lg:col-span-2 border-0 shadow-md">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Target className="w-5 h-5 text-[#7c6aef]" />
+                <Award className="w-5 h-5 text-[#7c6aef]" />
                 Recently Completed
               </CardTitle>
             </CardHeader>
@@ -204,18 +231,87 @@ export default function Dashboard() {
           </Card>
         </div>
 
+        {/* Upcoming Meetings Section */}
+        {upcomingRegisteredMeetings.length > 0 && (
+          <Card className="border-0 shadow-md mb-8">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-[#7c6aef]" />
+                Your Upcoming Meetings
+              </CardTitle>
+              <Link to={createPageUrl('Calendar')}>
+                <Button variant="ghost" size="sm">
+                  View Calendar
+                  <ChevronRight className="ml-1 w-4 h-4" />
+                </Button>
+              </Link>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {upcomingRegisteredMeetings.slice(0, 3).map((meeting, index) => {
+                  const meetingDate = new Date(meeting.date);
+                  return (
+                    <motion.div
+                      key={meeting.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="p-4 bg-slate-50 rounded-xl border border-slate-100"
+                    >
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className={`w-12 h-12 rounded-lg ${categoryColors[meeting.category]} flex items-center justify-center`}>
+                          <Video className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-slate-900 truncate">{meeting.title}</p>
+                          <div className="flex items-center gap-2 mt-1 text-sm text-slate-500">
+                            <Clock className="w-3 h-3" />
+                            {meetingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} • {meeting.time}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 mb-3 text-sm">
+                        <User className="w-4 h-4 text-slate-400" />
+                        <span className="text-slate-700 truncate">{meeting.teacher_name}</span>
+                      </div>
+
+                      <a href={meeting.meeting_link} target="_blank" rel="noopener noreferrer">
+                        <Button className="w-full bg-green-600 hover:bg-green-700" size="sm">
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          Join Meeting
+                        </Button>
+                      </a>
+                    </motion.div>
+                  );
+                })}
+              </div>
+              
+              {upcomingRegisteredMeetings.length > 3 && (
+                <div className="mt-4 text-center">
+                  <Link to={createPageUrl('Calendar')}>
+                    <Button variant="outline">
+                      View All {upcomingRegisteredMeetings.length} Meetings
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Quick Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
-            { label: 'Lessons', value: userProgress?.completed_lessons?.length || 0, icon: BookOpen, color: 'blue' },
-            { label: 'Quizzes', value: userProgress?.completed_quizzes?.length || 0, icon: CheckCircle, color: 'green' },
-            { label: 'Videos', value: userProgress?.completed_videos?.length || 0, icon: Play, color: 'red' },
-            { label: 'Downloads', value: userProgress?.downloaded_resources?.length || 0, icon: Download, color: 'purple' },
+            { label: 'Lessons', value: userProgress?.completed_lessons?.length || 0, icon: BookOpen, color: 'bg-blue-100 text-blue-600' },
+            { label: 'Quizzes', value: userProgress?.completed_quizzes?.length || 0, icon: CheckCircle, color: 'bg-green-100 text-green-600' },
+            { label: 'Videos', value: userProgress?.completed_videos?.length || 0, icon: Play, color: 'bg-red-100 text-red-600' },
+            { label: 'Downloads', value: userProgress?.downloaded_resources?.length || 0, icon: Download, color: 'bg-purple-100 text-purple-600' },
           ].map((stat) => (
             <Card key={stat.label} className="border-0 shadow-sm">
               <CardContent className="p-4 flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg bg-${stat.color}-100 flex items-center justify-center`}>
-                  <stat.icon className={`w-5 h-5 text-${stat.color}-600`} />
+                <div className={`w-10 h-10 rounded-lg ${stat.color} flex items-center justify-center`}>
+                  <stat.icon className="w-5 h-5" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
@@ -248,6 +344,18 @@ export default function Dashboard() {
                   video: 'bg-red-100 text-red-600',
                   download: 'bg-purple-100 text-purple-600',
                 };
+
+                const handleClick = () => {
+                  if (resource.type === 'lesson') {
+                    window.location.href = createPageUrl(`LessonView?id=${resource.id}`);
+                  } else if (resource.type === 'quiz') {
+                    window.location.href = createPageUrl(`QuizView?id=${resource.id}`);
+                  } else if (resource.type === 'video') {
+                    window.location.href = createPageUrl(`VideoView?id=${resource.id}`);
+                  } else if (resource.type === 'download' && resource.download_url) {
+                    window.open(resource.download_url, '_blank');
+                  }
+                };
                 
                 return (
                   <motion.div
@@ -255,6 +363,7 @@ export default function Dashboard() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
+                    onClick={handleClick}
                     className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group"
                   >
                     <div className={`w-10 h-10 rounded-lg ${colors[resource.type]} flex items-center justify-center`}>
