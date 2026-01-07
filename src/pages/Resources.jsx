@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, BookOpen, Play, FileText, Download, Clock, Zap, ChevronRight, X, ExternalLink } from 'lucide-react';
+import { Search, BookOpen, Play, FileText, Download, Clock, Zap, ChevronRight, X, ExternalLink, CheckCircle, XCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -55,6 +55,14 @@ export default function Resources() {
     queryFn: async () => {
       const progress = await base44.entities.UserProgress.filter({ user_email: user.email });
       return progress[0];
+    },
+    enabled: !!user,
+  });
+
+  const { data: quizAttempts = [] } = useQuery({
+    queryKey: ['quizAttempts', user?.email],
+    queryFn: async () => {
+      return await base44.entities.QuizAttempt.filter({ user_email: user.email });
     },
     enabled: !!user,
   });
@@ -273,6 +281,27 @@ export default function Resources() {
             <AnimatePresence mode="popLayout">
               {filteredResources.map((resource, index) => {
                 const TypeIcon = typeIcons[resource.type] || BookOpen;
+                
+                // Check completion status
+                let isCompleted = false;
+                let quizScore = null;
+                
+                if (userProgress) {
+                  if (resource.type === 'lesson') {
+                    isCompleted = userProgress.completed_lessons?.includes(resource.id);
+                  } else if (resource.type === 'quiz') {
+                    isCompleted = userProgress.completed_quizzes?.includes(resource.id);
+                    const attempt = quizAttempts.find(a => a.quiz_id === resource.id);
+                    if (attempt) {
+                      quizScore = `${attempt.score}/${attempt.total_questions}`;
+                    }
+                  } else if (resource.type === 'video') {
+                    isCompleted = userProgress.completed_videos?.includes(resource.id);
+                  } else if (resource.type === 'download') {
+                    isCompleted = userProgress.downloaded_resources?.includes(resource.id);
+                  }
+                }
+
                 return (
                   <motion.div
                     key={resource.id}
@@ -291,9 +320,26 @@ export default function Resources() {
                           <div className={`w-12 h-12 rounded-xl ${typeColors[resource.type]} flex items-center justify-center`}>
                             <TypeIcon className="w-6 h-6" />
                           </div>
-                          <Badge variant="outline" className={difficultyColors[resource.difficulty]}>
-                            {resource.difficulty}
-                          </Badge>
+                          <div className="flex flex-col items-end gap-2">
+                            <Badge variant="outline" className={difficultyColors[resource.difficulty]}>
+                              {resource.difficulty}
+                            </Badge>
+                            <div className="flex items-center gap-1.5">
+                              {isCompleted ? (
+                                <>
+                                  <CheckCircle className="w-4 h-4 text-green-500" />
+                                  <span className="text-xs text-green-600 font-medium">
+                                    {quizScore ? `Complete (${quizScore})` : 'Complete'}
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <XCircle className="w-4 h-4 text-slate-400" />
+                                  <span className="text-xs text-slate-500">Incomplete</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
                         </div>
 
                         <h3 className="text-lg font-semibold text-slate-900 mb-2 group-hover:text-[#7c6aef] transition-colors">

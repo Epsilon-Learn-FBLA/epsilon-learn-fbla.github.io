@@ -202,7 +202,7 @@ export default function Layout({ children, currentPageName }) {
               <span className="text-white font-semibold">Epsilon Learning</span>
             </div>
             <p className="text-white/70 text-sm">
-              © 2024 Epsilon. Empowering future business leaders.
+              © 2026 Epsilon. Empowering future business leaders.
             </p>
           </div>
         </div>
