@@ -18,6 +18,7 @@ export default function Layout({ children, currentPageName }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [theme, setTheme] = useState('light');
 
   useEffect(() => {
     loadUser();
@@ -27,6 +28,7 @@ export default function Layout({ children, currentPageName }) {
     try {
       const currentUser = await base44.auth.me();
       setUser(currentUser);
+      setTheme(currentUser.theme || 'light');
       const progress = await base44.entities.UserProgress.filter({ user_email: currentUser.email });
       if (progress.length > 0) {
         setUserProgress(progress[0]);
@@ -51,7 +53,7 @@ export default function Layout({ children, currentPageName }) {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className={`min-h-screen ${theme === 'dark' ? 'bg-slate-900' : theme === 'high-contrast' ? 'bg-white' : 'bg-slate-50'}`}>
       <style>{`
         :root {
           --primary: #7c6aef;
@@ -74,6 +76,41 @@ export default function Layout({ children, currentPageName }) {
         [role="progressbar"] > div {
           background: linear-gradient(90deg, #7c6aef 0%, #a99ef7 100%);
         }
+
+        /* Dark Mode Styles */
+        ${theme === 'dark' ? `
+          body { background: #0f172a; }
+          .bg-white { background-color: #1e293b !important; }
+          .bg-slate-50 { background-color: #0f172a !important; }
+          .bg-slate-100 { background-color: #1e293b !important; }
+          .text-slate-900 { color: #f1f5f9 !important; }
+          .text-slate-800 { color: #e2e8f0 !important; }
+          .text-slate-700 { color: #cbd5e1 !important; }
+          .text-slate-600 { color: #94a3b8 !important; }
+          .text-slate-500 { color: #64748b !important; }
+          .border-slate-100 { border-color: #334155 !important; }
+          .border-slate-200 { border-color: #475569 !important; }
+          .border-slate-300 { border-color: #64748b !important; }
+          [class*="shadow-"] { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3) !important; }
+        ` : ''}
+
+        /* High Contrast Styles */
+        ${theme === 'high-contrast' ? `
+          body { background: #ffffff; }
+          .bg-slate-50 { background-color: #ffffff !important; }
+          .bg-slate-100 { background-color: #000000 !important; }
+          .bg-white { background-color: #ffffff !important; }
+          .text-slate-900 { color: #000000 !important; }
+          .text-slate-800 { color: #000000 !important; }
+          .text-slate-700 { color: #000000 !important; }
+          .text-slate-600 { color: #1a1a1a !important; }
+          .text-slate-500 { color: #333333 !important; }
+          .border-slate-100 { border-color: #000000 !important; border-width: 2px !important; }
+          .border-slate-200 { border-color: #000000 !important; border-width: 2px !important; }
+          .border-slate-300 { border-color: #000000 !important; border-width: 2px !important; }
+          [class*="shadow-"] { box-shadow: 0 0 0 3px #000000 !important; }
+          .gradient-header { background: #000000 !important; }
+        ` : ''}
       `}</style>
 
       {/* Header */}
