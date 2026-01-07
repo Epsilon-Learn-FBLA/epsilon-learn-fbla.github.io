@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '../utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, BookOpen, Play, FileText, Download, Filter, Clock, Zap, ChevronRight, X } from 'lucide-react';
+import { Search, BookOpen, Play, FileText, Download, Clock, Zap, ChevronRight, X, ExternalLink } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -25,11 +27,63 @@ export default function Resources() {
   const [activeType, setActiveType] = useState(initialType);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
-  const [selectedResource, setSelectedResource] = useState(null);
+  const [user, setUser] = useState(null);
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    loadUser();
+  }, []);
+
+  const loadUser = async () => {
+    try {
+      const currentUser = await base44.auth.me();
+      setUser(currentUser);
+    } catch (e) {
+      // Not logged in
+    }
+  };
 
   const { data: resources = [], isLoading } = useQuery({
     queryKey: ['resources'],
     queryFn: () => base44.entities.Resource.list(),
+  });
+
+  const { data: userProgress } = useQuery({
+    queryKey: ['userProgress', user?.email],
+    queryFn: async () => {
+      const progress = await base44.entities.UserProgress.filter({ user_email: user.email });
+      return progress[0];
+    },
+    enabled: !!user,
+  });
+
+  const trackDownloadMutation = useMutation({
+    mutationFn: async (resourceId) => {
+      if (!userProgress) {
+        await base44.entities.UserProgress.create({
+          user_email: user.email,
+          xp: 50,
+          completed_lessons: [],
+          completed_quizzes: [],
+          completed_videos: [],
+          downloaded_resources: [resourceId],
+          badges: ['starter'],
+          streak_days: 1,
+        });
+      } else {
+        const downloads = userProgress.downloaded_resources || [];
+        if (!downloads.includes(resourceId)) {
+          downloads.push(resourceId);
+          await base44.entities.UserProgress.update(userProgress.id, {
+            downloaded_resources: downloads,
+            xp: (userProgress.xp || 0) + 50,
+          });
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['userProgress']);
+    },
   });
 
   const typeIcons = {
@@ -69,6 +123,24 @@ export default function Resources() {
     { value: 'entrepreneurship', label: 'Entrepreneurship' },
     { value: 'leadership', label: 'Leadership' },
   ];
+
+  const handleResourceClick = (resource) => {
+    if (resource.type === 'lesson') {
+      window.location.href = createPageUrl(`LessonView?id=${resource.id}`);
+    } else if (resource.type === 'quiz') {
+      window.location.href = createPageUrl(`QuizView?id=${resource.id}`);
+    } else if (resource.type === 'video') {
+      window.location.href = createPageUrl(`VideoView?id=${resource.id}`);
+    } else if (resource.type === 'download') {
+      // Track download and open link
+      if (user) {
+        trackDownloadMutation.mutate(resource.id);
+      }
+      if (resource.download_url) {
+        window.open(resource.download_url, '_blank');
+      }
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 py-8">
@@ -208,7 +280,7 @@ export default function Resources() {
                   >
                     <Card
                       className="h-full border-0 shadow-md hover:shadow-xl transition-all cursor-pointer group bg-white"
-                      onClick={() => setSelectedResource(resource)}
+                      onClick={() => handleResourceClick(resource)}
                     >
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between mb-4">
@@ -240,7 +312,11 @@ export default function Resources() {
                               +{resource.xp_reward || 100} XP
                             </span>
                           </div>
-                          <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-[#7c6aef] group-hover:translate-x-1 transition-all" />
+                          {resource.type === 'download' ? (
+                            <ExternalLink className="w-5 h-5 text-slate-400 group-hover:text-[#7c6aef] transition-colors" />
+                          ) : (
+                            <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-[#7c6aef] group-hover:translate-x-1 transition-all" />
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -250,78 +326,6 @@ export default function Resources() {
             </AnimatePresence>
           </div>
         )}
-
-        {/* Resource Detail Modal */}
-        <AnimatePresence>
-          {selectedResource && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-              onClick={() => setSelectedResource(null)}
-            >
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="p-8">
-                  <div className="flex items-start justify-between mb-6">
-                    <div className={`w-16 h-16 rounded-xl ${typeColors[selectedResource.type]} flex items-center justify-center`}>
-                      {React.createElement(typeIcons[selectedResource.type] || BookOpen, { className: 'w-8 h-8' })}
-                    </div>
-                    <button
-                      onClick={() => setSelectedResource(null)}
-                      className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-                    >
-                      <X className="w-6 h-6 text-slate-500" />
-                    </button>
-                  </div>
-
-                  <h2 className="text-2xl font-bold text-slate-900 mb-2">{selectedResource.title}</h2>
-                  
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    <Badge className={typeColors[selectedResource.type]}>
-                      {selectedResource.type}
-                    </Badge>
-                    <Badge variant="outline" className={difficultyColors[selectedResource.difficulty]}>
-                      {selectedResource.difficulty}
-                    </Badge>
-                    <Badge variant="outline">
-                      {selectedResource.category?.replace('_', ' ')}
-                    </Badge>
-                  </div>
-
-                  <p className="text-slate-600 mb-6 leading-relaxed">
-                    {selectedResource.description}
-                  </p>
-
-                  <div className="bg-slate-50 rounded-xl p-4 mb-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-slate-500">Duration</p>
-                        <p className="font-semibold text-slate-900">{selectedResource.duration_minutes || 15} minutes</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-slate-500">XP Reward</p>
-                        <p className="font-semibold text-amber-600">+{selectedResource.xp_reward || 100} XP</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Button className="w-full bg-[#7c6aef] hover:bg-[#5b4acf] h-12 text-lg">
-                    {selectedResource.type === 'download' ? 'Download Resource' : 
-                     selectedResource.type === 'video' ? 'Watch Video' :
-                     selectedResource.type === 'quiz' ? 'Start Quiz' : 'Start Lesson'}
-                  </Button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
     </div>
   );
