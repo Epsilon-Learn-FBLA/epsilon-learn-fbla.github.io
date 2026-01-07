@@ -175,6 +175,7 @@ export default function Profile() {
   const [user, setUser] = useState(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editName, setEditName] = useState('');
+  const [theme, setTheme] = useState('light');
 
   useEffect(() => {
     loadUser();
@@ -185,8 +186,18 @@ export default function Profile() {
       const currentUser = await base44.auth.me();
       setUser(currentUser);
       setEditName(currentUser.full_name || '');
+      setTheme(currentUser.theme || 'light');
     } catch (e) {
       base44.auth.redirectToLogin();
+    }
+  };
+
+  const handleThemeChange = async (newTheme) => {
+    setTheme(newTheme);
+    try {
+      await base44.auth.updateMe({ theme: newTheme });
+    } catch (e) {
+      console.error('Failed to update theme');
     }
   };
 
@@ -385,6 +396,54 @@ export default function Profile() {
                 />
               </div>
               <p className="text-sm text-slate-500 mt-2">{xpToNextLevel} XP to Level {level + 1}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Settings */}
+        <Card className="border-0 shadow-md mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              Settings
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div>
+              <Label className="text-sm font-medium text-slate-700 mb-3 block">Theme</Label>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => handleThemeChange('light')}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                    theme === 'light' ? 'border-[#7c6aef] bg-purple-50' : 'border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="w-12 h-12 rounded-full bg-white border-2 border-slate-300" />
+                  <span className="text-sm font-medium text-slate-700">Light Mode</span>
+                </button>
+
+                <button
+                  onClick={() => handleThemeChange('dark')}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                    theme === 'dark' ? 'border-[#7c6aef] bg-purple-50' : 'border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="w-12 h-12 rounded-full bg-slate-700 border-2 border-slate-600" />
+                  <span className="text-sm font-medium text-slate-700">Dark Mode</span>
+                </button>
+
+                <button
+                  onClick={() => handleThemeChange('high-contrast')}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                    theme === 'high-contrast' ? 'border-[#7c6aef] bg-purple-50' : 'border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="w-12 h-12 rounded-full border-2 border-slate-300 overflow-hidden flex">
+                    <div className="w-1/2 bg-white" />
+                    <div className="w-1/2 bg-slate-700" />
+                  </div>
+                  <span className="text-sm font-medium text-slate-700">High Contrast</span>
+                </button>
+              </div>
             </div>
           </CardContent>
         </Card>
