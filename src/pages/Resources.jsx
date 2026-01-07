@@ -17,6 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { generateBusinessPDF } from '../components/PDFGenerator';
+import { toast } from 'sonner';
 
 export default function Resources() {
   const urlParams = new URLSearchParams(window.location.search);
