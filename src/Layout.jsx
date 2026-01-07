@@ -68,6 +68,12 @@ export default function Layout({ children, currentPageName }) {
           -webkit-text-fill-color: transparent;
           background-clip: text;
         }
+        
+        /* Progress bar styling */
+        [data-state="complete"] > div,
+        [role="progressbar"] > div {
+          background: linear-gradient(90deg, #7c6aef 0%, #a99ef7 100%);
+        }
       `}</style>
 
       {/* Header */}
