@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { User, Award, Zap, Calendar, BookOpen, CheckCircle, Play, Download, Edit2, LogOut } from 'lucide-react';
+import { User, Award, Zap, BookOpen, CheckCircle, Play, Download, Edit2, LogOut, Star, Trophy, Target, Flame, Crown, Gem } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,61 +15,157 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 
-// Custom Badge Components
-const BadgeDisplay = ({ badge }) => {
-  const badgeStyles = {
+// Custom HTML Badge Components
+const BadgeDisplay = ({ badge, earned = true }) => {
+  const badgeConfigs = {
     starter: {
       gradient: 'from-slate-400 to-slate-600',
-      icon: '🌟',
-      border: 'border-slate-300',
+      icon: Star,
+      border: 'border-slate-400',
+      glow: 'shadow-slate-300/50',
+      title: 'Getting Started',
+      description: 'Welcome to Epsilon!',
     },
     learner: {
       gradient: 'from-blue-400 to-blue-600',
-      icon: '📚',
-      border: 'border-blue-300',
+      icon: BookOpen,
+      border: 'border-blue-400',
+      glow: 'shadow-blue-300/50',
+      title: 'Eager Learner',
+      description: 'Complete 5 lessons',
     },
-    achiever: {
-      gradient: 'from-green-400 to-green-600',
-      icon: '🏆',
-      border: 'border-green-300',
+    quiz_master: {
+      gradient: 'from-green-400 to-emerald-600',
+      icon: CheckCircle,
+      border: 'border-green-400',
+      glow: 'shadow-green-300/50',
+      title: 'Quiz Master',
+      description: 'Pass 5 quizzes',
     },
-    master: {
-      gradient: 'from-purple-400 to-purple-600',
-      icon: '💎',
-      border: 'border-purple-300',
+    video_watcher: {
+      gradient: 'from-red-400 to-rose-600',
+      icon: Play,
+      border: 'border-red-400',
+      glow: 'shadow-red-300/50',
+      title: 'Video Scholar',
+      description: 'Watch 5 videos',
+    },
+    xp_hunter: {
+      gradient: 'from-amber-400 to-orange-600',
+      icon: Zap,
+      border: 'border-amber-400',
+      glow: 'shadow-amber-300/50',
+      title: 'XP Hunter',
+      description: 'Earn 1000 XP',
+    },
+    streak_master: {
+      gradient: 'from-orange-500 to-red-600',
+      icon: Flame,
+      border: 'border-orange-400',
+      glow: 'shadow-orange-300/50',
+      title: 'On Fire',
+      description: '7-day streak',
     },
     champion: {
-      gradient: 'from-amber-400 to-amber-600',
-      icon: '👑',
-      border: 'border-amber-300',
+      gradient: 'from-purple-400 to-violet-600',
+      icon: Trophy,
+      border: 'border-purple-400',
+      glow: 'shadow-purple-300/50',
+      title: 'Champion',
+      description: 'Complete 10 resources',
+    },
+    completionist: {
+      gradient: 'from-indigo-400 to-purple-600',
+      icon: Target,
+      border: 'border-indigo-400',
+      glow: 'shadow-indigo-300/50',
+      title: 'Completionist',
+      description: 'Finish all categories',
     },
     legend: {
-      gradient: 'from-rose-400 to-rose-600',
-      icon: '🔥',
-      border: 'border-rose-300',
+      gradient: 'from-yellow-400 via-amber-500 to-orange-500',
+      icon: Crown,
+      border: 'border-yellow-400',
+      glow: 'shadow-yellow-300/50',
+      title: 'Epsilon Legend',
+      description: 'Master all content',
+    },
+    diamond: {
+      gradient: 'from-cyan-400 to-blue-500',
+      icon: Gem,
+      border: 'border-cyan-400',
+      glow: 'shadow-cyan-300/50',
+      title: 'Diamond Status',
+      description: 'Earn 5000 XP',
     },
   };
 
-  const style = badgeStyles[badge.type] || badgeStyles.starter;
+  const config = badgeConfigs[badge.id] || badgeConfigs.starter;
+  const IconComponent = config.icon;
+
+  if (!earned) {
+    return (
+      <div className="relative group">
+        <div className="w-24 h-28 rounded-xl bg-slate-200 border-2 border-slate-300 border-dashed flex flex-col items-center justify-center p-2 opacity-60">
+          <div className="w-12 h-12 rounded-full bg-slate-300 flex items-center justify-center mb-2">
+            <span className="text-xl">🔒</span>
+          </div>
+          <span className="text-[10px] font-medium text-slate-500 text-center">???</span>
+        </div>
+        
+        {/* Tooltip */}
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+          <div className="bg-slate-900 text-white text-xs py-2 px-3 rounded-lg whitespace-nowrap shadow-lg">
+            <p className="font-semibold">{config.title}</p>
+            <p className="text-slate-300">{config.description}</p>
+          </div>
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <motion.div
       whileHover={{ scale: 1.05, y: -5 }}
-      className={`relative group cursor-pointer`}
+      className="relative group cursor-pointer"
     >
-      <div className={`w-20 h-24 rounded-xl bg-gradient-to-br ${style.gradient} ${style.border} border-2 shadow-lg flex flex-col items-center justify-center p-2`}>
-        <span className="text-2xl mb-1">{style.icon}</span>
-        <div className="w-full h-6 bg-white/20 rounded flex items-center justify-center">
-          <span className="text-[10px] font-bold text-white uppercase tracking-wider">{badge.name}</span>
+      {/* Badge Container */}
+      <div className={`
+        w-24 h-28 rounded-xl 
+        bg-gradient-to-br ${config.gradient} 
+        border-2 ${config.border}
+        shadow-lg ${config.glow}
+        flex flex-col items-center justify-center p-2
+        relative overflow-hidden
+      `}>
+        {/* Shine effect */}
+        <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-transparent" />
+        
+        {/* Icon */}
+        <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mb-2 relative z-10">
+          <IconComponent className="w-6 h-6 text-white drop-shadow-md" />
         </div>
+        
+        {/* Badge Name */}
+        <div className="w-full bg-white/20 backdrop-blur-sm rounded py-1 px-2 relative z-10">
+          <span className="text-[10px] font-bold text-white uppercase tracking-wider block text-center truncate">
+            {badge.name}
+          </span>
+        </div>
+
+        {/* Decorative elements */}
+        <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-white/40" />
+        <div className="absolute top-3 right-3 w-1 h-1 rounded-full bg-white/30" />
       </div>
       
       {/* Tooltip */}
-      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-        <div className="bg-slate-900 text-white text-xs py-2 px-3 rounded-lg whitespace-nowrap">
-          <p className="font-semibold">{badge.title}</p>
-          <p className="text-slate-300">{badge.description}</p>
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
+        <div className="bg-slate-900 text-white text-xs py-2 px-3 rounded-lg whitespace-nowrap shadow-lg">
+          <p className="font-semibold">{config.title}</p>
+          <p className="text-slate-300">{config.description}</p>
         </div>
+        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900" />
       </div>
     </motion.div>
   );
@@ -114,17 +210,61 @@ export default function Profile() {
     enabled: !!user,
   });
 
-  // Badge definitions
+  const { data: quizAttempts = [] } = useQuery({
+    queryKey: ['quizAttempts', user?.email],
+    queryFn: () => base44.entities.QuizAttempt.filter({ user_email: user.email }),
+    enabled: !!user,
+  });
+
+  // Calculate badges based on progress
+  const calculateEarnedBadges = () => {
+    const badges = ['starter']; // Everyone gets starter
+    
+    if ((userProgress?.completed_lessons?.length || 0) >= 5) {
+      badges.push('learner');
+    }
+    if ((userProgress?.completed_quizzes?.length || 0) >= 5) {
+      badges.push('quiz_master');
+    }
+    if ((userProgress?.completed_videos?.length || 0) >= 5) {
+      badges.push('video_watcher');
+    }
+    if ((userProgress?.xp || 0) >= 1000) {
+      badges.push('xp_hunter');
+    }
+    if ((userProgress?.streak_days || 0) >= 7) {
+      badges.push('streak_master');
+    }
+    
+    const totalCompleted = (userProgress?.completed_lessons?.length || 0) + 
+      (userProgress?.completed_quizzes?.length || 0) + 
+      (userProgress?.completed_videos?.length || 0);
+    
+    if (totalCompleted >= 10) {
+      badges.push('champion');
+    }
+    if ((userProgress?.xp || 0) >= 5000) {
+      badges.push('diamond');
+    }
+    
+    return badges;
+  };
+
+  // All possible badges
   const allBadges = [
-    { id: 'starter', type: 'starter', name: 'Starter', title: 'Getting Started', description: 'Welcome to Epsilon!' },
-    { id: 'learner', type: 'learner', name: 'Learner', title: 'Eager Learner', description: 'Complete 5 lessons' },
-    { id: 'achiever', type: 'achiever', name: 'Achiever', title: 'Quiz Master', description: 'Pass 5 quizzes' },
-    { id: 'master', type: 'master', name: 'Master', title: 'Knowledge Master', description: 'Earn 1000 XP' },
-    { id: 'champion', type: 'champion', name: 'Champion', title: 'Champion', description: '7-day streak' },
-    { id: 'legend', type: 'legend', name: 'Legend', title: 'Epsilon Legend', description: 'Complete all content' },
+    { id: 'starter', name: 'Starter' },
+    { id: 'learner', name: 'Learner' },
+    { id: 'quiz_master', name: 'Quiz Pro' },
+    { id: 'video_watcher', name: 'Scholar' },
+    { id: 'xp_hunter', name: 'Hunter' },
+    { id: 'streak_master', name: 'On Fire' },
+    { id: 'champion', name: 'Champion' },
+    { id: 'completionist', name: 'Complete' },
+    { id: 'legend', name: 'Legend' },
+    { id: 'diamond', name: 'Diamond' },
   ];
 
-  const earnedBadgeIds = userProgress?.badges || ['starter'];
+  const earnedBadgeIds = calculateEarnedBadges();
   const earnedBadges = allBadges.filter(b => earnedBadgeIds.includes(b.id));
   const lockedBadges = allBadges.filter(b => !earnedBadgeIds.includes(b.id));
 
@@ -148,6 +288,11 @@ export default function Profile() {
   const xpToNextLevel = 500 - (xp % 500);
   const levelProgress = ((xp % 500) / 500) * 100;
 
+  // Calculate quiz stats
+  const avgScore = quizAttempts.length > 0 
+    ? Math.round(quizAttempts.reduce((acc, a) => acc + (a.score / a.total_questions * 100), 0) / quizAttempts.length)
+    : 0;
+
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -162,9 +307,10 @@ export default function Profile() {
         {/* Profile Header */}
         <Card className="border-0 shadow-lg overflow-hidden mb-8">
           <div className="gradient-header h-32 relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-[#7c6aef] to-[#a99ef7]" />
             {/* Level Badge */}
             <div className="absolute top-4 right-4">
-              <div className="w-14 h-14 bg-amber-400 rounded-full flex items-center justify-center shadow-lg border-4 border-white">
+              <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg border-4 border-white">
                 <span className="text-2xl font-bold text-white">{level}</span>
               </div>
             </div>
@@ -174,7 +320,7 @@ export default function Profile() {
             <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 -mt-16 mb-6">
               {/* Avatar */}
               <div className="w-32 h-32 rounded-full bg-white border-4 border-white shadow-lg flex items-center justify-center">
-                <div className="w-28 h-28 rounded-full bg-slate-200 flex items-center justify-center">
+                <div className="w-28 h-28 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
                   <User className="w-14 h-14 text-slate-400" />
                 </div>
               </div>
@@ -244,20 +390,21 @@ export default function Profile() {
         </Card>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           {[
             { label: 'Lessons', value: userProgress?.completed_lessons?.length || 0, icon: BookOpen, color: 'bg-blue-100 text-blue-600' },
             { label: 'Quizzes', value: userProgress?.completed_quizzes?.length || 0, icon: CheckCircle, color: 'bg-green-100 text-green-600' },
             { label: 'Videos', value: userProgress?.completed_videos?.length || 0, icon: Play, color: 'bg-red-100 text-red-600' },
             { label: 'Downloads', value: userProgress?.downloaded_resources?.length || 0, icon: Download, color: 'bg-purple-100 text-purple-600' },
+            { label: 'Avg Quiz', value: `${avgScore}%`, icon: Target, color: 'bg-amber-100 text-amber-600' },
           ].map((stat) => (
             <Card key={stat.label} className="border-0 shadow-sm">
               <CardContent className="p-4 text-center">
-                <div className={`w-12 h-12 rounded-xl ${stat.color} flex items-center justify-center mx-auto mb-2`}>
-                  <stat.icon className="w-6 h-6" />
+                <div className={`w-10 h-10 rounded-lg ${stat.color} flex items-center justify-center mx-auto mb-2`}>
+                  <stat.icon className="w-5 h-5" />
                 </div>
-                <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
-                <p className="text-sm text-slate-500">{stat.label}</p>
+                <p className="text-xl font-bold text-slate-900">{stat.value}</p>
+                <p className="text-xs text-slate-500">{stat.label}</p>
               </CardContent>
             </Card>
           ))}
@@ -268,7 +415,7 @@ export default function Profile() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Award className="w-5 h-5 text-[#7c6aef]" />
-              Badges Earned
+              Badges Earned ({earnedBadges.length}/{allBadges.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -283,7 +430,7 @@ export default function Profile() {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: index * 0.1 }}
                   >
-                    <BadgeDisplay badge={badge} />
+                    <BadgeDisplay badge={badge} earned={true} />
                   </motion.div>
                 ))}
               </div>
@@ -295,17 +442,7 @@ export default function Profile() {
                 <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-4">Locked</h3>
                 <div className="flex flex-wrap gap-4">
                   {lockedBadges.map((badge) => (
-                    <div key={badge.id} className="relative">
-                      <div className="w-20 h-24 rounded-xl bg-slate-200 border-2 border-slate-300 flex flex-col items-center justify-center p-2 opacity-50">
-                        <span className="text-2xl mb-1">🔒</span>
-                        <div className="w-full h-6 bg-slate-300 rounded flex items-center justify-center">
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">???</span>
-                        </div>
-                      </div>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-slate-400 text-xs">{badge.description}</span>
-                      </div>
-                    </div>
+                    <BadgeDisplay key={badge.id} badge={badge} earned={false} />
                   ))}
                 </div>
               </div>
